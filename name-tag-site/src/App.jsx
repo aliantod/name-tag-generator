@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react'
 import Papa from 'papaparse'
 import Draggable from 'react-draggable'
 import { drawTextOnCanvas, loadImageFile } from './lib/image'
-import { canvasToPngBlob, exportPdfA4, exportPngZip } from './lib/export'
+import { canvasToPngBlob, exportPdfA4, exportPngZip, drawNameSubtitleOnCtx } from './lib/export'
 
 const defaultState = {
   fontFamily: 'Arial, sans-serif',
@@ -13,6 +13,13 @@ const defaultState = {
   fill: '#111111',
   stroke: '#ffffff',
   strokeWidth: 0,
+  subFontSize: 36,
+  subFontWeight: '500',
+  subFill: '#333333',
+  subStroke: '#ffffff',
+  subStrokeWidth: 0,
+  subUppercase: false,
+  lineGapPx: 22,
   xPct: 50,
   yPct: 50,
   offsetX: 0,
@@ -26,9 +33,12 @@ export default function App() {
   const [templateImg, setTemplateImg] = useState(null)
   const [templateSize, setTemplateSize] = useState({ w: 0, h: 0 })
   const [names, setNames] = useState([])
+  const [subtitles, setSubtitles] = useState([])
   const [csvHeaders, setCsvHeaders] = useState([])
-  const [csvColumn, setCsvColumn] = useState('')
+  const [csvNameCol, setCsvNameCol] = useState('')
+  const [csvSubCol, setCsvSubCol] = useState('')
   const [sampleName, setSampleName] = useState('Sample Name')
+  const [sampleSubtitle, setSampleSubtitle] = useState('Sample Subtitle')
   const [st, setSt] = useState(defaultState)
 
   const canvasRef = useRef(null)
@@ -59,8 +69,11 @@ export default function App() {
         const data = res.data || []
         const headers = res.meta?.fields || []
         setCsvHeaders(headers)
-        setCsvColumn(headers[0] || '')
-        setNames(data.map((row) => (row[headers[0]] || '').toString()).filter(Boolean))
+        const nameCol = headers[0] || ''
+        setCsvNameCol(nameCol)
+        setCsvSubCol('')
+        setNames(data.map((row) => (row[nameCol] || '').toString()))
+        setSubtitles(data.map((row) => ''))
       },
       error: (err) => alert('CSV parse error: ' + err.message),
     })
@@ -74,20 +87,33 @@ export default function App() {
     const ctx = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height)
-    drawTextOnCanvas(ctx, {
-      text: sampleName,
+    drawNameSubtitleOnCtx(ctx, {
+      name: sampleName,
+      subtitle: sampleSubtitle,
       xPct: st.xPct,
       yPct: st.yPct,
       offsetX: st.offsetX,
       offsetY: st.offsetY,
       align: st.align,
-      uppercase: st.uppercase,
-      fontFamily: st.fontFamily,
-      fontSizePx: st.fontSize,
-      fontWeight: st.fontWeight,
-      fill: st.fill,
-      stroke: st.stroke,
-      strokeWidth: st.strokeWidth,
+      nameStyle: {
+        fontFamily: st.fontFamily,
+        fontSizePx: st.fontSize,
+        fontWeight: st.fontWeight,
+        fill: st.fill,
+        stroke: st.stroke,
+        strokeWidth: st.strokeWidth,
+        uppercase: st.uppercase,
+      },
+      subtitleStyle: {
+        fontFamily: st.fontFamily,
+        fontSizePx: st.subFontSize,
+        fontWeight: st.subFontWeight,
+        fill: st.subFill,
+        stroke: st.subStroke,
+        strokeWidth: st.subStrokeWidth,
+        uppercase: st.subUppercase,
+      },
+      lineGapPx: st.lineGapPx,
       canvasWidth: canvas.width,
       canvasHeight: canvas.height,
     })
@@ -119,29 +145,48 @@ export default function App() {
     const ctx = hc.getContext('2d')
 
     const images = []
-    for (const name of names.length ? names : [sampleName]) {
+    const rows = (names.length ? names : [sampleName]).map((n, i) => ({
+      name: n,
+      sub: (names.length ? subtitles[i] : sampleSubtitle) || '',
+    }))
+    for (const row of rows) {
       ctx.clearRect(0, 0, hc.width, hc.height)
       ctx.drawImage(templateImg, 0, 0, hc.width, hc.height)
-      drawTextOnCanvas(ctx, {
-        text: name,
+      drawNameSubtitleOnCtx(ctx, {
+        name: row.name,
+        subtitle: row.sub,
         xPct: st.xPct,
         yPct: st.yPct,
         offsetX: st.offsetX,
         offsetY: st.offsetY,
         align: st.align,
-        uppercase: st.uppercase,
-        fontFamily: st.fontFamily,
-        fontSizePx: st.fontSize,
-        fontWeight: st.fontWeight,
-        fill: st.fill,
-        stroke: st.stroke,
-        strokeWidth: st.strokeWidth,
+        nameStyle: {
+          fontFamily: st.fontFamily,
+          fontSizePx: st.fontSize,
+          fontWeight: st.fontWeight,
+          fill: st.fill,
+          stroke: st.stroke,
+          strokeWidth: st.strokeWidth,
+          uppercase: st.uppercase,
+        },
+        subtitleStyle: {
+          fontFamily: st.fontFamily,
+          fontSizePx: st.subFontSize,
+          fontWeight: st.subFontWeight,
+          fill: st.subFill,
+          stroke: st.subStroke,
+          strokeWidth: st.subStrokeWidth,
+          uppercase: st.subUppercase,
+        },
+        lineGapPx: st.lineGapPx,
         canvasWidth: hc.width,
         canvasHeight: hc.height,
       })
       const blob = await canvasToPngBlob(hc)
-      const safe = (name || 'name').replace(/[^a-z0-9-_ ]/gi, '-').replace(/\s+/g, ' ').trim()
-      const filename = (st.filenamePattern || '{{name}}-nametag.png').replace('{{name}}', safe)
+      const safeName = (row.name || 'name').replace(/[^a-z0-9-_ ]/gi, '-').replace(/\s+/g, ' ').trim()
+      const safeSub = (row.sub || '').replace(/[^a-z0-9-_ ]/gi, '-').replace(/\s+/g, ' ').trim()
+      let filename = (st.filenamePattern || '{{name}}-nametag.png').replace('{{name}}', safeName)
+      filename = filename.replace('{{subtitle}}', safeSub)
       images.push({ name: filename, blob })
     }
     await exportPngZip(images)
@@ -155,23 +200,40 @@ export default function App() {
     const ctx = hc.getContext('2d')
 
     const canvases = []
-    for (const name of names.length ? names : [sampleName]) {
+    const rows = (names.length ? names : [sampleName]).map((n, i) => ({
+      name: n,
+      sub: (names.length ? subtitles[i] : sampleSubtitle) || '',
+    }))
+    for (const row of rows) {
       ctx.clearRect(0, 0, hc.width, hc.height)
       ctx.drawImage(templateImg, 0, 0, hc.width, hc.height)
-      drawTextOnCanvas(ctx, {
-        text: name,
+      drawNameSubtitleOnCtx(ctx, {
+        name: row.name,
+        subtitle: row.sub,
         xPct: st.xPct,
         yPct: st.yPct,
         offsetX: st.offsetX,
         offsetY: st.offsetY,
         align: st.align,
-        uppercase: st.uppercase,
-        fontFamily: st.fontFamily,
-        fontSizePx: st.fontSize,
-        fontWeight: st.fontWeight,
-        fill: st.fill,
-        stroke: st.stroke,
-        strokeWidth: st.strokeWidth,
+        nameStyle: {
+          fontFamily: st.fontFamily,
+          fontSizePx: st.fontSize,
+          fontWeight: st.fontWeight,
+          fill: st.fill,
+          stroke: st.stroke,
+          strokeWidth: st.strokeWidth,
+          uppercase: st.uppercase,
+        },
+        subtitleStyle: {
+          fontFamily: st.fontFamily,
+          fontSizePx: st.subFontSize,
+          fontWeight: st.subFontWeight,
+          fill: st.subFill,
+          stroke: st.subStroke,
+          strokeWidth: st.subStrokeWidth,
+          uppercase: st.subUppercase,
+        },
+        lineGapPx: st.lineGapPx,
         canvasWidth: hc.width,
         canvasHeight: hc.height,
       })
@@ -214,21 +276,56 @@ export default function App() {
           </div>
 
           {hasCsv && (
-            <div className="flex items-center gap-2">
-              <label className="label">CSV Column</label>
-              <select
-                className="input"
-                value={csvColumn}
-                onChange={(e) => {
-                  const col = e.target.value
-                  setCsvColumn(col)
-                  setNames((prev) => prev) // keep
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2">
+                <label className="label">Name Column</label>
+                <select
+                  className="input"
+                  value={csvNameCol}
+                  onChange={(e) => {
+                    const col = e.target.value
+                    setCsvNameCol(col)
+                  }}
+                >
+                  {csvHeaders.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="label">Subtitle Column</label>
+                <select
+                  className="input"
+                  value={csvSubCol}
+                  onChange={(e) => {
+                    const col = e.target.value
+                    setCsvSubCol(col)
+                  }}
+                >
+                  <option value="">(none)</option>
+                  {csvHeaders.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                className="px-2 py-1 bg-gray-200 rounded"
+                onClick={() => {
+                  // Rebuild names/subtitles from currently selected columns
+                  const fileInput = document.querySelector('input[type="file"][accept=".csv"]')
+                  const file = fileInput?.files?.[0]
+                  if (!file) return
+                  Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (res) => {
+                      const rows = res.data || []
+                      setNames(rows.map((r) => (r[csvNameCol] || '').toString()))
+                      setSubtitles(rows.map((r) => (csvSubCol ? (r[csvSubCol] || '').toString() : '')))
+                    },
+                  })
                 }}
-              >
-                {csvHeaders.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
+              >Apply Columns</button>
             </div>
           )}
 
@@ -268,6 +365,38 @@ export default function App() {
             <div className="flex items-center gap-2 mt-6">
               <input id="uppercase" type="checkbox" checked={st.uppercase} onChange={(e) => setSt({ ...st, uppercase: e.target.checked })} />
               <label htmlFor="uppercase" className="label">Uppercase</label>
+            </div>
+          </div>
+
+          <div className="section-title mt-2">Subtitle</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="label">Font Size</label>
+              <input type="number" className="input" value={st.subFontSize} onChange={(e) => setSt({ ...st, subFontSize: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="label">Weight</label>
+              <input className="input" value={st.subFontWeight} onChange={(e) => setSt({ ...st, subFontWeight: e.target.value })} />
+            </div>
+            <div>
+              <label className="label">Fill</label>
+              <input type="color" className="input" value={st.subFill} onChange={(e) => setSt({ ...st, subFill: e.target.value })} />
+            </div>
+            <div>
+              <label className="label">Outline</label>
+              <input type="color" className="input" value={st.subStroke} onChange={(e) => setSt({ ...st, subStroke: e.target.value })} />
+            </div>
+            <div>
+              <label className="label">Outline Width</label>
+              <input type="number" className="input" value={st.subStrokeWidth} onChange={(e) => setSt({ ...st, subStrokeWidth: Number(e.target.value) })} />
+            </div>
+            <div className="flex items-center gap-2 mt-6">
+              <input id="subUppercase" type="checkbox" checked={st.subUppercase} onChange={(e) => setSt({ ...st, subUppercase: e.target.checked })} />
+              <label htmlFor="subUppercase" className="label">Uppercase</label>
+            </div>
+            <div>
+              <label className="label">Line Gap (px)</label>
+              <input type="number" className="input" value={st.lineGapPx} onChange={(e) => setSt({ ...st, lineGapPx: Number(e.target.value) })} />
             </div>
           </div>
 

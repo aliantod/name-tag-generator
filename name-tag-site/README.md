@@ -22,10 +22,19 @@ pnpm preview
 2) Paste names (one per line), or upload a CSV. If CSV has multiple headers, pick the column.
 3) Drag the handle on the preview to set the name position. Position is stored as % so exports match template scaling.
 4) Adjust font, size, weight, uppercase, alignment, color, outline.
-5) Choose the filename pattern (default `{{name}}-nametag.png`).
-6) Export either PNGs (as a ZIP) or a PDF sheet. PDF fits multiple tags per A4 based on tag width and page margin.
+5) Optional subtitle: pick a CSV subtitle column and set subtitle styling and line gap.
+6) Choose the filename pattern (default `{{name}}-nametag.png`). You can also include `{{subtitle}}`.
+7) Export either PNGs (as a ZIP) or a PDF sheet. PDF fits multiple tags per A4 based on tag width and page margin.
 
 Screenshots:
+
+### CSV Example
+
+```
+Name,Company
+Rahul Gulve,Alphawave Semi
+Jane Doe,Volunteer
+```
 
 ![Controls Placeholder](./docs/controls.png)
 ![Preview Placeholder](./docs/preview.png)

@@ -2,6 +2,95 @@ import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { jsPDF } from 'jspdf'
 
+export type TextStyle = {
+  fontFamily: string
+  fontSizePx: number
+  fontWeight: string | number
+  fill: string
+  stroke?: string
+  strokeWidth?: number
+  uppercase?: boolean
+}
+
+function setFont(ctx: CanvasRenderingContext2D, style: TextStyle) {
+  ctx.font = `${style.fontWeight} ${style.fontSizePx}px ${style.fontFamily}`
+}
+
+function measureMiddleHeight(ctx: CanvasRenderingContext2D, text: string) {
+  const m = ctx.measureText(text)
+  const ascent = (m.actualBoundingBoxAscent || 0)
+  const descent = (m.actualBoundingBoxDescent || 0)
+  return ascent + descent
+}
+
+export function drawNameSubtitleOnCtx(
+  ctx: CanvasRenderingContext2D,
+  options: {
+    name: string
+    subtitle?: string
+    xPct: number
+    yPct: number
+    offsetX: number
+    offsetY: number
+    align: 'left' | 'center' | 'right'
+    nameStyle: TextStyle
+    subtitleStyle: TextStyle
+    lineGapPx: number
+    canvasWidth: number
+    canvasHeight: number
+  }
+) {
+  const {
+    name,
+    subtitle,
+    xPct,
+    yPct,
+    offsetX,
+    offsetY,
+    align,
+    nameStyle,
+    subtitleStyle,
+    lineGapPx,
+    canvasWidth,
+    canvasHeight,
+  } = options
+
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = align
+
+  const nameText = nameStyle.uppercase ? (name || '').toUpperCase() : (name || '')
+  const subTextRaw = subtitleStyle.uppercase ? (subtitle || '').toUpperCase() : (subtitle || '')
+  const hasSubtitle = !!subTextRaw
+
+  const x = (xPct / 100) * canvasWidth + offsetX
+  const yMid = (yPct / 100) * canvasHeight + offsetY
+
+  // Name first
+  setFont(ctx, nameStyle)
+  const nameH = measureMiddleHeight(ctx, nameText)
+  const yName = yMid
+  if (nameStyle.stroke && (nameStyle.strokeWidth || 0) > 0) {
+    ctx.strokeStyle = nameStyle.stroke
+    ctx.lineWidth = nameStyle.strokeWidth || 0
+    ctx.strokeText(nameText, x, yName)
+  }
+  ctx.fillStyle = nameStyle.fill
+  ctx.fillText(nameText, x, yName)
+
+  if (hasSubtitle) {
+    setFont(ctx, subtitleStyle)
+    const subH = measureMiddleHeight(ctx, subTextRaw)
+    const ySub = yName + (nameH / 2) + lineGapPx + (subH / 2)
+    if (subtitleStyle.stroke && (subtitleStyle.strokeWidth || 0) > 0) {
+      ctx.strokeStyle = subtitleStyle.stroke
+      ctx.lineWidth = subtitleStyle.strokeWidth || 0
+      ctx.strokeText(subTextRaw, x, ySub)
+    }
+    ctx.fillStyle = subtitleStyle.fill
+    ctx.fillText(subTextRaw, x, ySub)
+  }
+}
+
 export async function exportPngZip(
   images: { name: string; blob: Blob }[],
   zipName = 'name-tags.zip'

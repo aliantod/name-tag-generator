@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Simple helpers */
+.label {
+  @apply text-sm text-gray-700 font-medium;
+}
+.input {
+  @apply w-full border rounded px-2 py-1 text-sm bg-white;
+}
+.section-title {
+  @apply text-xs uppercase tracking-wide text-gray-500 font-semibold;
+}
+
+

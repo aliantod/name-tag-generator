@@ -6,6 +6,7 @@ export type TextStyle = {
   fontFamily: string
   fontSizePx: number
   fontWeight: string | number
+  fontStyle?: 'normal' | 'italic' | 'oblique'
   fill: string
   stroke?: string
   strokeWidth?: number
@@ -13,7 +14,8 @@ export type TextStyle = {
 }
 
 function setFont(ctx: CanvasRenderingContext2D, style: TextStyle) {
-  ctx.font = `${style.fontWeight} ${style.fontSizePx}px ${style.fontFamily}`
+  const fontStyle = style.fontStyle || 'normal'
+  ctx.font = `${fontStyle} ${style.fontWeight} ${style.fontSizePx}px ${style.fontFamily}`
 }
 
 function measureMiddleHeight(ctx: CanvasRenderingContext2D, text: string) {

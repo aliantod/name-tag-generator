@@ -15,6 +15,7 @@ const defaultState = {
   strokeWidth: 0,
   subFontSize: 36,
   subFontWeight: '500',
+  subItalic: false,
   subFill: '#333333',
   subStroke: '#ffffff',
   subStrokeWidth: 0,
@@ -127,6 +128,7 @@ export default function App() {
         fontFamily: st.fontFamily,
         fontSizePx: st.subFontSize,
         fontWeight: st.subFontWeight,
+        fontStyle: st.subItalic ? 'italic' : 'normal',
         fill: st.subFill,
         stroke: st.subStroke,
         strokeWidth: st.subStrokeWidth,
@@ -192,6 +194,7 @@ export default function App() {
           fontFamily: st.fontFamily,
           fontSizePx: st.subFontSize,
           fontWeight: st.subFontWeight,
+        fontStyle: st.subItalic ? 'italic' : 'normal',
           fill: st.subFill,
           stroke: st.subStroke,
           strokeWidth: st.subStrokeWidth,
@@ -247,6 +250,7 @@ export default function App() {
           fontFamily: st.fontFamily,
           fontSizePx: st.subFontSize,
           fontWeight: st.subFontWeight,
+        fontStyle: st.subItalic ? 'italic' : 'normal',
           fill: st.subFill,
           stroke: st.subStroke,
           strokeWidth: st.subStrokeWidth,
@@ -396,6 +400,14 @@ export default function App() {
             <div>
               <label className="label">Weight</label>
               <input className="input" value={st.subFontWeight} onChange={(e) => setSt({ ...st, subFontWeight: e.target.value })} />
+            </div>
+            <div className="flex items-center gap-2 mt-6">
+              <input id="subBold" type="checkbox" checked={String(st.subFontWeight) === '700'} onChange={(e) => setSt({ ...st, subFontWeight: e.target.checked ? '700' : '500' })} />
+              <label htmlFor="subBold" className="label">Bold</label>
+            </div>
+            <div className="flex items-center gap-2 mt-6">
+              <input id="subItalic" type="checkbox" checked={st.subItalic} onChange={(e) => setSt({ ...st, subItalic: e.target.checked })} />
+              <label htmlFor="subItalic" className="label">Italic</label>
             </div>
             <div>
               <label className="label">Fill</label>

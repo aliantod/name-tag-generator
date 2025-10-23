@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { jsPDF } from 'jspdf'
+import { measureAndFitText } from './image'
 
 export type TextStyle = {
   fontFamily: string
@@ -93,6 +94,103 @@ export function drawNameSubtitleOnCtx(
     ctx.fillStyle = subtitleStyle.fill
     ctx.fillText(subTextRaw, x, ySub)
   }
+}
+
+export function drawWithinBox(
+  ctx: CanvasRenderingContext2D,
+  options: {
+    name: string
+    subtitle?: string
+    box: { x: number; y: number; w: number; h: number }
+    align: 'left' | 'center' | 'right'
+    nameStyle: TextStyle & { minPx: number; maxPx: number }
+    subtitleStyle: TextStyle & { minPx: number; maxPx: number }
+    lineGapPx: number
+    lineGapScale?: number
+  }
+) {
+  const { name, subtitle, box, align, nameStyle, subtitleStyle, lineGapPx, lineGapScale = 1 } = options
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(box.x, box.y, box.w, box.h)
+  ctx.clip()
+
+  // Horizontal alignment mapping for x
+  const xFor = (tw: number) => {
+    if (align === 'left') return box.x
+    if (align === 'right') return box.x + box.w - tw
+    return box.x + box.w / 2
+  }
+
+  // Content (apply uppercase if needed)
+  const nameContent = nameStyle.uppercase ? (name || '').toUpperCase() : (name || '')
+  const subContentRaw = subtitleStyle.uppercase ? (subtitle || '').toUpperCase() : (subtitle || '')
+  const hasSubtitle = !!subContentRaw
+
+  // Fit and wrap name
+  const nameFit = measureAndFitText(
+    ctx,
+    nameContent,
+    nameStyle.fontFamily,
+    box.w,
+    nameStyle.minPx,
+    nameStyle.maxPx,
+    String(nameStyle.fontWeight),
+    (nameStyle.fontStyle as any) || 'normal',
+  )
+
+  // Fit subtitle (single line shrink, no wrap)
+  let subPx = subtitleStyle.maxPx
+  if (hasSubtitle) {
+    for (let px = subtitleStyle.maxPx; px >= subtitleStyle.minPx; px--) {
+      ctx.font = `${subtitleStyle.fontStyle || 'normal'} ${subtitleStyle.fontWeight} ${px}px ${subtitleStyle.fontFamily}`
+      if (ctx.measureText(subContentRaw).width <= box.w) { subPx = px; break }
+    }
+  }
+  ctx.font = `${subtitleStyle.fontStyle || 'normal'} ${subtitleStyle.fontWeight} ${subPx}px ${subtitleStyle.fontFamily}`
+  const subMetrics = hasSubtitle ? ctx.measureText('Mg') : null
+  const subLineH = hasSubtitle ? ((subMetrics!.actualBoundingBoxAscent + subMetrics!.actualBoundingBoxDescent) || subPx * 1.2) : 0
+
+  const gap = lineGapPx * lineGapScale
+  const nameBlockH = nameFit.lines.length * nameFit.lineHeight
+  const totalH = hasSubtitle ? (nameBlockH + gap + subLineH) : nameBlockH
+  let yTop = box.y + (box.h - totalH) / 2
+  if (yTop < box.y) yTop = box.y
+
+  // Draw name lines
+  ctx.textBaseline = 'top'
+  ctx.textAlign = align
+  ctx.font = `${nameStyle.fontStyle || 'normal'} ${nameStyle.fontWeight} ${nameFit.size}px ${nameStyle.fontFamily}`
+  for (let i = 0; i < nameFit.lines.length; i++) {
+    const line = nameFit.lines[i]
+    const lineW = ctx.measureText(line).width
+    const x = align === 'center' ? (box.x + box.w / 2) : xFor(lineW)
+    const y = yTop + i * nameFit.lineHeight
+    if (nameStyle.stroke && (nameStyle.strokeWidth || 0) > 0) {
+      ctx.strokeStyle = nameStyle.stroke
+      ctx.lineWidth = nameStyle.strokeWidth || 0
+      ctx.strokeText(line, x, y)
+    }
+    ctx.fillStyle = nameStyle.fill
+    ctx.fillText(line, x, y)
+  }
+
+  // Draw subtitle below
+  if (hasSubtitle) {
+    const ySub = yTop + nameBlockH + gap
+    ctx.font = `${subtitleStyle.fontStyle || 'normal'} ${subtitleStyle.fontWeight} ${subPx}px ${subtitleStyle.fontFamily}`
+    const w = ctx.measureText(subContentRaw).width
+    const x = align === 'center' ? (box.x + box.w / 2) : xFor(w)
+    if (subtitleStyle.stroke && (subtitleStyle.strokeWidth || 0) > 0) {
+      ctx.strokeStyle = subtitleStyle.stroke
+      ctx.lineWidth = subtitleStyle.strokeWidth || 0
+      ctx.strokeText(subContentRaw, x, ySub)
+    }
+    ctx.fillStyle = subtitleStyle.fill
+    ctx.fillText(subContentRaw, x, ySub)
+  }
+
+  ctx.restore()
 }
 
 export async function exportPngZip(

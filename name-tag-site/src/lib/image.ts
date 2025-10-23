@@ -74,4 +74,66 @@ export function drawTextOnCanvas(
   ctx.fillText(content, x, y)
 }
 
+export function measureAndFitText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  fontFamily: string,
+  targetWidth: number,
+  minPx: number,
+  maxPx: number,
+  fontWeight: string | number,
+  fontStyle: 'normal' | 'italic' | 'oblique' = 'normal',
+) {
+  const lines: string[] = []
+  let fitSize = maxPx
+  const clean = (text || '').toString()
+  if (!clean) {
+    return { size: minPx, lines: [''], lineHeight: minPx * 1.2 }
+  }
+
+  const applyFont = (px: number) => {
+    ctx.font = `${fontStyle} ${fontWeight} ${px}px ${fontFamily}`
+  }
+
+  const measureWidth = (s: string) => ctx.measureText(s).width
+
+  // Shrink-to-fit loop
+  for (let px = maxPx; px >= minPx; px -= 1) {
+    applyFont(px)
+    const w = measureWidth(clean)
+    if (w <= targetWidth) {
+      fitSize = px
+      break
+    }
+  }
+
+  // If still too wide at min, try soft-wrap (max 2 lines)
+  applyFont(fitSize)
+  if (measureWidth(clean) > targetWidth) {
+    const words = clean.split(/\s+/)
+    let first = ''
+    let second = ''
+    for (let i = 0; i < words.length; i++) {
+      const t = (first ? first + ' ' : '') + words[i]
+      if (measureWidth(t) <= targetWidth) {
+        first = t
+      } else {
+        // rest into second
+        second = words.slice(i).join(' ')
+        break
+      }
+    }
+    if (!first) first = clean
+    lines.push(first)
+    if (second) lines.push(second)
+  } else {
+    lines.push(clean)
+  }
+
+  const metrics = ctx.measureText('Mg')
+  const lineHeight = (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) || fitSize * 1.2
+  return { size: fitSize, lines, lineHeight }
+}
+
+
 

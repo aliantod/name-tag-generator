@@ -1,8 +1,9 @@
 import React, { useMemo, useRef, useState } from 'react'
 import Papa from 'papaparse'
 import Draggable from 'react-draggable'
+import { Rnd } from 'react-rnd'
 import { drawTextOnCanvas, loadImageFile } from './lib/image'
-import { canvasToPngBlob, exportPdfA4, exportPngZip, drawNameSubtitleOnCtx } from './lib/export'
+import { canvasToPngBlob, exportPdfA4, exportPngZip, drawNameSubtitleOnCtx, drawWithinBox } from './lib/export'
 
 const defaultState = {
   fontFamily: 'Arial, sans-serif',
@@ -43,6 +44,15 @@ export default function App() {
   const [sampleName, setSampleName] = useState('Sample Name')
   const [sampleSubtitle, setSampleSubtitle] = useState('Sample Subtitle')
   const [st, setSt] = useState(defaultState)
+
+  // Bounding box state
+  const [useBox, setUseBox] = useState(false)
+  const [showGuides, setShowGuides] = useState(true)
+  const [box, setBox] = useState({ xPct: 20, yPct: 35, wPct: 60, hPct: 30 })
+  const [nameMin, setNameMin] = useState(32)
+  const [nameMax, setNameMax] = useState(72)
+  const [subMin, setSubMin] = useState(18)
+  const [subMax, setSubMax] = useState(48)
 
   const canvasRef = useRef(null)
   const hiddenCanvasRef = useRef(null)
@@ -108,38 +118,88 @@ export default function App() {
     const ctx = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height)
-    drawNameSubtitleOnCtx(ctx, {
-      name: sampleName,
-      subtitle: sampleSubtitle,
-      xPct: st.xPct,
-      yPct: st.yPct,
-      offsetX: st.offsetX,
-      offsetY: st.offsetY,
-      align: st.align,
-      nameStyle: {
-        fontFamily: st.fontFamily,
-        fontSizePx: st.fontSize,
-        fontWeight: st.fontWeight,
-        fill: st.fill,
-        stroke: st.stroke,
-        strokeWidth: st.strokeWidth,
-        uppercase: st.uppercase,
-      },
-      subtitleStyle: {
-        fontFamily: st.fontFamily,
-        fontSizePx: st.subFontSize,
-        fontWeight: st.subFontWeight,
-        fontStyle: st.subItalic ? 'italic' : 'normal',
-        fill: st.subFill,
-        stroke: st.subStroke,
-        strokeWidth: st.subStrokeWidth,
-        uppercase: st.subUppercase,
-      },
-      lineGapPx: st.lineGapPx,
-      lineGapScale: st.lineGapScale,
-      canvasWidth: canvas.width,
-      canvasHeight: canvas.height,
-    })
+    if (useBox) {
+      const b = {
+        x: (box.xPct / 100) * canvas.width,
+        y: (box.yPct / 100) * canvas.height,
+        w: (box.wPct / 100) * canvas.width,
+        h: (box.hPct / 100) * canvas.height,
+      }
+      drawWithinBox(ctx, {
+        name: sampleName,
+        subtitle: sampleSubtitle,
+        box: b,
+        align: st.align,
+        nameStyle: {
+          fontFamily: st.fontFamily,
+          fontSizePx: st.fontSize,
+          fontWeight: st.fontWeight,
+          fontStyle: 'normal',
+          fill: st.fill,
+          stroke: st.stroke,
+          strokeWidth: st.strokeWidth,
+          uppercase: st.uppercase,
+          minPx: nameMin,
+          maxPx: nameMax,
+        },
+        subtitleStyle: {
+          fontFamily: st.fontFamily,
+          fontSizePx: st.subFontSize,
+          fontWeight: st.subFontWeight,
+          fontStyle: st.subItalic ? 'italic' : 'normal',
+          fill: st.subFill,
+          stroke: st.subStroke,
+          strokeWidth: st.subStrokeWidth,
+          uppercase: st.subUppercase,
+          minPx: subMin,
+          maxPx: subMax,
+        },
+        lineGapPx: st.lineGapPx,
+        lineGapScale: st.lineGapScale,
+      })
+      if (showGuides) {
+        ctx.save()
+        ctx.setLineDash([6, 6])
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)'
+        ctx.strokeRect(b.x, b.y, b.w, b.h)
+        ctx.fillStyle = 'rgba(0,0,0,0.05)'
+        ctx.fillRect(b.x, b.y, b.w, b.h)
+        ctx.restore()
+      }
+    } else {
+      drawNameSubtitleOnCtx(ctx, {
+        name: sampleName,
+        subtitle: sampleSubtitle,
+        xPct: st.xPct,
+        yPct: st.yPct,
+        offsetX: st.offsetX,
+        offsetY: st.offsetY,
+        align: st.align,
+        nameStyle: {
+          fontFamily: st.fontFamily,
+          fontSizePx: st.fontSize,
+          fontWeight: st.fontWeight,
+          fill: st.fill,
+          stroke: st.stroke,
+          strokeWidth: st.strokeWidth,
+          uppercase: st.uppercase,
+        },
+        subtitleStyle: {
+          fontFamily: st.fontFamily,
+          fontSizePx: st.subFontSize,
+          fontWeight: st.subFontWeight,
+          fontStyle: st.subItalic ? 'italic' : 'normal',
+          fill: st.subFill,
+          stroke: st.subStroke,
+          strokeWidth: st.subStrokeWidth,
+          uppercase: st.subUppercase,
+        },
+        lineGapPx: st.lineGapPx,
+        lineGapScale: st.lineGapScale,
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+      })
+    }
   }
 
   const onDrag = (e, data) => {
@@ -175,38 +235,79 @@ export default function App() {
     for (const row of rows) {
       ctx.clearRect(0, 0, hc.width, hc.height)
       ctx.drawImage(templateImg, 0, 0, hc.width, hc.height)
-      drawNameSubtitleOnCtx(ctx, {
-        name: row.name,
-        subtitle: row.sub,
-        xPct: st.xPct,
-        yPct: st.yPct,
-        offsetX: st.offsetX,
-        offsetY: st.offsetY,
-        align: st.align,
-        nameStyle: {
-          fontFamily: st.fontFamily,
-          fontSizePx: st.fontSize,
-          fontWeight: st.fontWeight,
-          fill: st.fill,
-          stroke: st.stroke,
-          strokeWidth: st.strokeWidth,
-          uppercase: st.uppercase,
-        },
-        subtitleStyle: {
-          fontFamily: st.fontFamily,
-          fontSizePx: st.subFontSize,
-          fontWeight: st.subFontWeight,
-        fontStyle: st.subItalic ? 'italic' : 'normal',
-          fill: st.subFill,
-          stroke: st.subStroke,
-          strokeWidth: st.subStrokeWidth,
-          uppercase: st.subUppercase,
-        },
-        lineGapPx: st.lineGapPx,
-        lineGapScale: st.lineGapScale,
-        canvasWidth: hc.width,
-        canvasHeight: hc.height,
-      })
+      if (useBox) {
+        const b = {
+          x: (box.xPct / 100) * hc.width,
+          y: (box.yPct / 100) * hc.height,
+          w: (box.wPct / 100) * hc.width,
+          h: (box.hPct / 100) * hc.height,
+        }
+        drawWithinBox(ctx, {
+          name: row.name,
+          subtitle: row.sub,
+          box: b,
+          align: st.align,
+          nameStyle: {
+            fontFamily: st.fontFamily,
+            fontSizePx: st.fontSize,
+            fontWeight: st.fontWeight,
+            fontStyle: 'normal',
+            fill: st.fill,
+            stroke: st.stroke,
+            strokeWidth: st.strokeWidth,
+            uppercase: st.uppercase,
+            minPx: nameMin,
+            maxPx: nameMax,
+          },
+          subtitleStyle: {
+            fontFamily: st.fontFamily,
+            fontSizePx: st.subFontSize,
+            fontWeight: st.subFontWeight,
+            fontStyle: st.subItalic ? 'italic' : 'normal',
+            fill: st.subFill,
+            stroke: st.subStroke,
+            strokeWidth: st.subStrokeWidth,
+            uppercase: st.subUppercase,
+            minPx: subMin,
+            maxPx: subMax,
+          },
+          lineGapPx: st.lineGapPx,
+          lineGapScale: st.lineGapScale,
+        })
+      } else {
+        drawNameSubtitleOnCtx(ctx, {
+          name: row.name,
+          subtitle: row.sub,
+          xPct: st.xPct,
+          yPct: st.yPct,
+          offsetX: st.offsetX,
+          offsetY: st.offsetY,
+          align: st.align,
+          nameStyle: {
+            fontFamily: st.fontFamily,
+            fontSizePx: st.fontSize,
+            fontWeight: st.fontWeight,
+            fill: st.fill,
+            stroke: st.stroke,
+            strokeWidth: st.strokeWidth,
+            uppercase: st.uppercase,
+          },
+          subtitleStyle: {
+            fontFamily: st.fontFamily,
+            fontSizePx: st.subFontSize,
+            fontWeight: st.subFontWeight,
+            fontStyle: st.subItalic ? 'italic' : 'normal',
+            fill: st.subFill,
+            stroke: st.subStroke,
+            strokeWidth: st.subStrokeWidth,
+            uppercase: st.subUppercase,
+          },
+          lineGapPx: st.lineGapPx,
+          lineGapScale: st.lineGapScale,
+          canvasWidth: hc.width,
+          canvasHeight: hc.height,
+        })
+      }
       const blob = await canvasToPngBlob(hc)
       const safeName = (row.name || 'name').replace(/[^a-z0-9-_ ]/gi, '-').replace(/\s+/g, ' ').trim()
       const safeSub = (row.sub || '').replace(/[^a-z0-9-_ ]/gi, '-').replace(/\s+/g, ' ').trim()
@@ -232,38 +333,79 @@ export default function App() {
     for (const row of rows) {
       ctx.clearRect(0, 0, hc.width, hc.height)
       ctx.drawImage(templateImg, 0, 0, hc.width, hc.height)
-      drawNameSubtitleOnCtx(ctx, {
-        name: row.name,
-        subtitle: row.sub,
-        xPct: st.xPct,
-        yPct: st.yPct,
-        offsetX: st.offsetX,
-        offsetY: st.offsetY,
-        align: st.align,
-        nameStyle: {
-          fontFamily: st.fontFamily,
-          fontSizePx: st.fontSize,
-          fontWeight: st.fontWeight,
-          fill: st.fill,
-          stroke: st.stroke,
-          strokeWidth: st.strokeWidth,
-          uppercase: st.uppercase,
-        },
-        subtitleStyle: {
-          fontFamily: st.fontFamily,
-          fontSizePx: st.subFontSize,
-          fontWeight: st.subFontWeight,
-        fontStyle: st.subItalic ? 'italic' : 'normal',
-          fill: st.subFill,
-          stroke: st.subStroke,
-          strokeWidth: st.subStrokeWidth,
-          uppercase: st.subUppercase,
-        },
-        lineGapPx: st.lineGapPx,
-        lineGapScale: st.lineGapScale,
-        canvasWidth: hc.width,
-        canvasHeight: hc.height,
-      })
+      if (useBox) {
+        const b = {
+          x: (box.xPct / 100) * hc.width,
+          y: (box.yPct / 100) * hc.height,
+          w: (box.wPct / 100) * hc.width,
+          h: (box.hPct / 100) * hc.height,
+        }
+        drawWithinBox(ctx, {
+          name: row.name,
+          subtitle: row.sub,
+          box: b,
+          align: st.align,
+          nameStyle: {
+            fontFamily: st.fontFamily,
+            fontSizePx: st.fontSize,
+            fontWeight: st.fontWeight,
+            fontStyle: 'normal',
+            fill: st.fill,
+            stroke: st.stroke,
+            strokeWidth: st.strokeWidth,
+            uppercase: st.uppercase,
+            minPx: nameMin,
+            maxPx: nameMax,
+          },
+          subtitleStyle: {
+            fontFamily: st.fontFamily,
+            fontSizePx: st.subFontSize,
+            fontWeight: st.subFontWeight,
+            fontStyle: st.subItalic ? 'italic' : 'normal',
+            fill: st.subFill,
+            stroke: st.subStroke,
+            strokeWidth: st.subStrokeWidth,
+            uppercase: st.subUppercase,
+            minPx: subMin,
+            maxPx: subMax,
+          },
+          lineGapPx: st.lineGapPx,
+          lineGapScale: st.lineGapScale,
+        })
+      } else {
+        drawNameSubtitleOnCtx(ctx, {
+          name: row.name,
+          subtitle: row.sub,
+          xPct: st.xPct,
+          yPct: st.yPct,
+          offsetX: st.offsetX,
+          offsetY: st.offsetY,
+          align: st.align,
+          nameStyle: {
+            fontFamily: st.fontFamily,
+            fontSizePx: st.fontSize,
+            fontWeight: st.fontWeight,
+            fill: st.fill,
+            stroke: st.stroke,
+            strokeWidth: st.strokeWidth,
+            uppercase: st.uppercase,
+          },
+          subtitleStyle: {
+            fontFamily: st.fontFamily,
+            fontSizePx: st.subFontSize,
+            fontWeight: st.subFontWeight,
+            fontStyle: st.subItalic ? 'italic' : 'normal',
+            fill: st.subFill,
+            stroke: st.subStroke,
+            strokeWidth: st.subStrokeWidth,
+            uppercase: st.subUppercase,
+          },
+          lineGapPx: st.lineGapPx,
+          lineGapScale: st.lineGapScale,
+          canvasWidth: hc.width,
+          canvasHeight: hc.height,
+        })
+      }
       // Clone canvas to preserve current drawing for array
       const clone = document.createElement('canvas')
       clone.width = hc.width
@@ -465,6 +607,34 @@ export default function App() {
             <button className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!canPreview} onClick={handleExportPngZip}>Export PNG (ZIP)</button>
             <button className="px-3 py-2 bg-emerald-600 text-white rounded disabled:opacity-50" disabled={!canPreview} onClick={handleExportPdf}>Export PDF (A4)</button>
           </div>
+
+          <div className="section-title mt-4">Bounding Box</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2">
+              <input id="lockToBox" type="checkbox" checked={useBox} onChange={(e) => setUseBox(e.target.checked)} />
+              <label htmlFor="lockToBox" className="label">Lock text to bounding box</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input id="showGuides" type="checkbox" checked={showGuides} onChange={(e) => setShowGuides(e.target.checked)} />
+              <label htmlFor="showGuides" className="label">Show guides</label>
+            </div>
+            <div>
+              <label className="label">Name Min Px</label>
+              <input type="number" className="input" value={nameMin} onChange={(e) => setNameMin(Number(e.target.value))} />
+            </div>
+            <div>
+              <label className="label">Name Max Px</label>
+              <input type="number" className="input" value={nameMax} onChange={(e) => setNameMax(Number(e.target.value))} />
+            </div>
+            <div>
+              <label className="label">Subtitle Min Px</label>
+              <input type="number" className="input" value={subMin} onChange={(e) => setSubMin(Number(e.target.value))} />
+            </div>
+            <div>
+              <label className="label">Subtitle Max Px</label>
+              <input type="number" className="input" value={subMax} onChange={(e) => setSubMax(Number(e.target.value))} />
+            </div>
+          </div>
         </div>
 
         {/* Preview */}
@@ -474,11 +644,33 @@ export default function App() {
           {templateImg && (
             <div className="relative inline-block" style={{ width: templateSize.w, height: templateSize.h }}>
               <canvas ref={canvasRef} width={templateSize.w} height={templateSize.h} className="border" />
-              <Draggable position={dragPos} onDrag={onDrag}>
-                <div className="absolute top-0 left-0 cursor-move select-none bg-black/20 text-white text-xs px-1 rounded">
-                  Drag text position
-                </div>
-              </Draggable>
+              {!useBox && (
+                <Draggable position={dragPos} onDrag={onDrag}>
+                  <div className="absolute top-0 left-0 cursor-move select-none bg-black/20 text-white text-xs px-1 rounded">
+                    Drag text position
+                  </div>
+                </Draggable>
+              )}
+              {useBox && (
+                <Rnd
+                  bounds="parent"
+                  size={{ width: (box.wPct/100)*templateSize.w, height: (box.hPct/100)*templateSize.h }}
+                  position={{ x: (box.xPct/100)*templateSize.w, y: (box.yPct/100)*templateSize.h }}
+                  onDragStop={(e, d) => {
+                    const xPct = (d.x / templateSize.w) * 100
+                    const yPct = (d.y / templateSize.h) * 100
+                    setBox((prev) => ({ ...prev, xPct, yPct }))
+                  }}
+                  onResizeStop={(e, dir, ref, delta, pos) => {
+                    const wPct = (ref.offsetWidth / templateSize.w) * 100
+                    const hPct = (ref.offsetHeight / templateSize.h) * 100
+                    const xPct = (pos.x / templateSize.w) * 100
+                    const yPct = (pos.y / templateSize.h) * 100
+                    setBox({ xPct, yPct, wPct, hPct })
+                  }}
+                  style={{ border: '2px dashed #666', background: 'rgba(0,0,0,0.04)' }}
+                />
+              )}
             </div>
           )}
           <canvas ref={hiddenCanvasRef} className="hidden" />

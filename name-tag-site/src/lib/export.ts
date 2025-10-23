@@ -38,6 +38,7 @@ export function drawNameSubtitleOnCtx(
     nameStyle: TextStyle
     subtitleStyle: TextStyle
     lineGapPx: number
+    lineGapScale?: number
     canvasWidth: number
     canvasHeight: number
   }
@@ -53,6 +54,7 @@ export function drawNameSubtitleOnCtx(
     nameStyle,
     subtitleStyle,
     lineGapPx,
+    lineGapScale = 1,
     canvasWidth,
     canvasHeight,
   } = options
@@ -82,7 +84,7 @@ export function drawNameSubtitleOnCtx(
   if (hasSubtitle) {
     setFont(ctx, subtitleStyle)
     const subH = measureMiddleHeight(ctx, subTextRaw)
-    const ySub = yName + (nameH / 2) + lineGapPx + (subH / 2)
+    const ySub = yName + (nameH / 2) + (lineGapPx * lineGapScale) + (subH / 2)
     if (subtitleStyle.stroke && (subtitleStyle.strokeWidth || 0) > 0) {
       ctx.strokeStyle = subtitleStyle.stroke
       ctx.lineWidth = subtitleStyle.strokeWidth || 0

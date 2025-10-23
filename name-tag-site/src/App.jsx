@@ -21,6 +21,7 @@ const defaultState = {
   subStrokeWidth: 0,
   subUppercase: false,
   lineGapPx: 22,
+  lineGapScale: 1,
   xPct: 50,
   yPct: 50,
   offsetX: 0,
@@ -135,6 +136,7 @@ export default function App() {
         uppercase: st.subUppercase,
       },
       lineGapPx: st.lineGapPx,
+      lineGapScale: st.lineGapScale,
       canvasWidth: canvas.width,
       canvasHeight: canvas.height,
     })
@@ -201,6 +203,7 @@ export default function App() {
           uppercase: st.subUppercase,
         },
         lineGapPx: st.lineGapPx,
+        lineGapScale: st.lineGapScale,
         canvasWidth: hc.width,
         canvasHeight: hc.height,
       })
@@ -257,6 +260,7 @@ export default function App() {
           uppercase: st.subUppercase,
         },
         lineGapPx: st.lineGapPx,
+        lineGapScale: st.lineGapScale,
         canvasWidth: hc.width,
         canvasHeight: hc.height,
       })
@@ -428,6 +432,10 @@ export default function App() {
             <div>
               <label className="label">Line Gap (px)</label>
               <input type="number" className="input" value={st.lineGapPx} onChange={(e) => setSt({ ...st, lineGapPx: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="label">Line Gap Scale (×)</label>
+              <input type="number" step="0.1" min="0" className="input" value={st.lineGapScale} onChange={(e) => setSt({ ...st, lineGapScale: Number(e.target.value) })} />
             </div>
           </div>
 

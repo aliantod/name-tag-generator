@@ -435,6 +435,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        <header className="app-header">
+          <div className="flex items-baseline justify-between">
+            <div>
+              <h1 className="app-title">Name Tag Generator</h1>
+              <p className="app-tagline">Generate printable name tags from a template, CSV, and drag-and-drop positioning. Exports PNG or custom A4 PDF.</p>
+            </div>
+            <div className="text-xs text-gray-500">Everything runs in your browser.</div>
+          </div>
+        </header>
+      </div>
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-4">
         {/* Controls */}
         <div className="md:col-span-4 bg-white rounded shadow p-4 space-y-4">
@@ -656,7 +667,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Preview */}
+        {/* Preview & How-To */}
         <div className="md:col-span-8 bg-white rounded shadow p-4">
           <h2 className="text-lg font-semibold mb-2">Preview</h2>
           {!templateImg && <div className="text-gray-500 text-sm">Upload a template image to begin.</div>}
@@ -693,6 +704,17 @@ export default function App() {
             </div>
           )}
           <canvas ref={hiddenCanvasRef} className="hidden" />
+
+          <div className="mt-6">
+            <div className="section-title mb-2">How to use</div>
+            <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1">
+              <li>Upload your template image (PNG/JPG).</li>
+              <li>Paste names or upload a CSV. Choose Name and optional Subtitle columns.</li>
+              <li>Drag the text handle, or enable “Lock text to bounding box” and resize the box.</li>
+              <li>Set fonts, colors, outline, uppercase, and the line gap.</li>
+              <li>Toggle custom A4 layout for fixed positions; export PNG (ZIP) or PDF.</li>
+            </ol>
+          </div>
         </div>
       </div>
     </div>

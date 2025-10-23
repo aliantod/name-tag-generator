@@ -13,4 +13,14 @@
   @apply text-xs uppercase tracking-wide text-gray-500 font-semibold;
 }
 
+.app-header {
+  @apply mb-6 pb-4 border-b;
+}
+.app-title {
+  @apply text-2xl font-semibold;
+}
+.app-tagline {
+  @apply text-sm text-gray-600;
+}
+
 

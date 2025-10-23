@@ -35,6 +35,7 @@ export default function App() {
   const [names, setNames] = useState([])
   const [subtitles, setSubtitles] = useState([])
   const [csvHeaders, setCsvHeaders] = useState([])
+  const [csvRows, setCsvRows] = useState([])
   const [csvNameCol, setCsvNameCol] = useState('')
   const [csvSubCol, setCsvSubCol] = useState('')
   const [sampleName, setSampleName] = useState('Sample Name')
@@ -69,15 +70,33 @@ export default function App() {
         const data = res.data || []
         const headers = res.meta?.fields || []
         setCsvHeaders(headers)
+        setCsvRows(data)
         const nameCol = headers[0] || ''
+        const subCol = headers[1] || ''
         setCsvNameCol(nameCol)
-        setCsvSubCol('')
-        setNames(data.map((row) => (row[nameCol] || '').toString()))
-        setSubtitles(data.map((row) => ''))
+        setCsvSubCol(subCol)
+        const newNames = data.map((row) => (row[nameCol] || '').toString())
+        const newSubs = data.map((row) => (subCol ? (row[subCol] || '').toString() : ''))
+        setNames(newNames)
+        setSubtitles(newSubs)
+        if (newNames[0]) setSampleName(newNames[0])
+        if (newSubs[0]) setSampleSubtitle(newSubs[0])
       },
       error: (err) => alert('CSV parse error: ' + err.message),
     })
   }
+
+  // Recompute names/subtitles automatically when user changes selected columns
+  React.useEffect(() => {
+    if (!csvRows.length || !csvHeaders.length) return
+    if (!csvNameCol && !csvSubCol) return
+    const newNames = csvRows.map((row) => (csvNameCol ? (row[csvNameCol] || '').toString() : ''))
+    const newSubs = csvRows.map((row) => (csvSubCol ? (row[csvSubCol] || '').toString() : ''))
+    setNames(newNames)
+    setSubtitles(newSubs)
+    if (newNames[0]) setSampleName(newNames[0])
+    if (newSubs[0]) setSampleSubtitle(newSubs[0])
+  }, [csvRows, csvNameCol, csvSubCol, csvHeaders])
 
   const regeneratePreview = () => {
     const canvas = canvasRef.current
@@ -256,6 +275,30 @@ export default function App() {
         <div className="md:col-span-4 bg-white rounded shadow p-4 space-y-4">
           <h2 className="text-lg font-semibold">Controls</h2>
 
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="label">Font Preset</label>
+              <select
+                className="input"
+                value={st.fontFamily}
+                onChange={(e) => setSt({ ...st, fontFamily: e.target.value })}
+              >
+                <option value="Inter, sans-serif">Inter</option>
+                <option value="Roboto, sans-serif">Roboto</option>
+                <option value="Montserrat, sans-serif">Montserrat</option>
+                <option value="Poppins, sans-serif">Poppins</option>
+                <option value="Open Sans, sans-serif">Open Sans</option>
+                <option value="Lato, sans-serif">Lato</option>
+                <option value="Nunito, sans-serif">Nunito</option>
+                <option value={st.fontFamily}>Custom (use below)</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Font Family (custom)</label>
+              <input className="input" value={st.fontFamily} onChange={(e) => setSt({ ...st, fontFamily: e.target.value })} />
+            </div>
+          </div>
+
           <div>
             <div className="section-title mb-1">Template Image</div>
             <input type="file" accept="image/*" onChange={onTemplateChange} className="input" />
@@ -282,10 +325,7 @@ export default function App() {
                 <select
                   className="input"
                   value={csvNameCol}
-                  onChange={(e) => {
-                    const col = e.target.value
-                    setCsvNameCol(col)
-                  }}
+                  onChange={(e) => setCsvNameCol(e.target.value)}
                 >
                   {csvHeaders.map((h) => (
                     <option key={h} value={h}>{h}</option>
@@ -297,10 +337,7 @@ export default function App() {
                 <select
                   className="input"
                   value={csvSubCol}
-                  onChange={(e) => {
-                    const col = e.target.value
-                    setCsvSubCol(col)
-                  }}
+                  onChange={(e) => setCsvSubCol(e.target.value)}
                 >
                   <option value="">(none)</option>
                   {csvHeaders.map((h) => (
@@ -308,24 +345,6 @@ export default function App() {
                   ))}
                 </select>
               </div>
-              <button
-                className="px-2 py-1 bg-gray-200 rounded"
-                onClick={() => {
-                  // Rebuild names/subtitles from currently selected columns
-                  const fileInput = document.querySelector('input[type="file"][accept=".csv"]')
-                  const file = fileInput?.files?.[0]
-                  if (!file) return
-                  Papa.parse(file, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: (res) => {
-                      const rows = res.data || []
-                      setNames(rows.map((r) => (r[csvNameCol] || '').toString()))
-                      setSubtitles(rows.map((r) => (csvSubCol ? (r[csvSubCol] || '').toString() : '')))
-                    },
-                  })
-                }}
-              >Apply Columns</button>
             </div>
           )}
 

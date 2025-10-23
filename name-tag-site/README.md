@@ -36,6 +36,11 @@ Rahul Gulve,Alphawave Semi
 Jane Doe,Volunteer
 ```
 
+### Fonts
+
+- The app renders text with the Canvas API. A curated set of Google Fonts is included and selectable via the "Font Preset" dropdown: Inter, Roboto, Montserrat, Poppins, Open Sans, Lato, and Nunito.
+- To use a custom font, paste a CSS font-family (e.g., `"Acme", sans-serif`) in the "Font Family (custom)" field. If it’s a web font, add its `<link>` to `index.html` or define `@font-face` in `src/styles.css`.
+
 ![Controls Placeholder](./docs/controls.png)
 ![Preview Placeholder](./docs/preview.png)
 

@@ -3,7 +3,7 @@ import Papa from 'papaparse'
 import Draggable from 'react-draggable'
 import { Rnd } from 'react-rnd'
 import { drawTextOnCanvas, loadImageFile } from './lib/image'
-import { canvasToPngBlob, exportPdfA4, exportPngZip, drawNameSubtitleOnCtx, drawWithinBox } from './lib/export'
+import { canvasToPngBlob, exportPdfA4, exportPngZip, drawNameSubtitleOnCtx, drawWithinBox, exportPdfA4Custom } from './lib/export'
 
 const defaultState = {
   fontFamily: 'Arial, sans-serif',
@@ -53,6 +53,17 @@ export default function App() {
   const [nameMax, setNameMax] = useState(72)
   const [subMin, setSubMin] = useState(18)
   const [subMax, setSubMax] = useState(48)
+  const [useCustomPdf, setUseCustomPdf] = useState(true)
+  const customRects = useMemo(() => ([
+    // Three horizontal left column
+    { x: 15, y: 26, w: 321.3, h: 207.87 },
+    { x: 15, y: 292, w: 321.3, h: 207.87 },
+    { x: 15, y: 558, w: 321.3, h: 207.87 },
+    // Two vertical right column
+    // A4 width ≈ 595pt: set right margin to 15pt -> x = 595 - 15 - 207.87 = 372.13
+    { x: 372.13, y: 26, w: 321.3, h: 207.87, rotate: 90 },
+    { x: 372.13, y: 376, w: 321.3, h: 207.87, rotate: 90 },
+  ]), [])
 
   const canvasRef = useRef(null)
   const hiddenCanvasRef = useRef(null)
@@ -413,7 +424,11 @@ export default function App() {
       clone.getContext('2d').drawImage(hc, 0, 0)
       canvases.push(clone)
     }
-    exportPdfA4(canvases, { tagWidthMm: st.tagWidthMm, marginMm: st.marginMm, filename: 'name-tags.pdf' })
+    if (useCustomPdf) {
+      exportPdfA4Custom(canvases, { rects: customRects, filename: 'name-tags.pdf' })
+    } else {
+      exportPdfA4(canvases, { tagWidthMm: st.tagWidthMm, marginMm: st.marginMm, filename: 'name-tags.pdf' })
+    }
   }
 
   const hasCsv = csvHeaders.length > 0
@@ -600,6 +615,10 @@ export default function App() {
             <div>
               <label className="label">PDF Margin (mm)</label>
               <input type="number" className="input" value={st.marginMm} onChange={(e) => setSt({ ...st, marginMm: Number(e.target.value) })} />
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <input id="useCustomPdf" type="checkbox" checked={useCustomPdf} onChange={(e) => setUseCustomPdf(e.target.checked)} />
+              <label htmlFor="useCustomPdf" className="label">Use custom A4 layout</label>
             </div>
           </div>
 

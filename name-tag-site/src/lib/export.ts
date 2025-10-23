@@ -271,4 +271,48 @@ export function exportPdfA4(
   doc.save(filename)
 }
 
+export type RectPt = { x: number; y: number; w: number; h: number; rotate?: 0 | 90 | 180 | 270 }
+
+function rotateCanvas(src: HTMLCanvasElement, angle: 0 | 90 | 180 | 270): HTMLCanvasElement {
+  if (!angle || angle % 360 === 0) return src
+  const out = document.createElement('canvas')
+  const ctx = out.getContext('2d')!
+  if (angle === 90 || angle === 270) {
+    out.width = src.height
+    out.height = src.width
+  } else {
+    out.width = src.width
+    out.height = src.height
+  }
+  ctx.translate(out.width / 2, out.height / 2)
+  ctx.rotate((angle * Math.PI) / 180)
+  ctx.drawImage(src, -src.width / 2, -src.height / 2)
+  return out
+}
+
+export function exportPdfA4Custom(
+  canvases: HTMLCanvasElement[],
+  opts: { rects: RectPt[]; filename?: string }
+) {
+  const { rects, filename = 'name-tags.pdf' } = opts
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+  if (canvases.length === 0 || rects.length === 0) {
+    doc.save(filename)
+    return
+  }
+  canvases.forEach((canvas, idx) => {
+    const rect = rects[idx % rects.length]
+    if (idx > 0 && idx % rects.length === 0) {
+      doc.addPage()
+    }
+    const rotated = rect.rotate ? rotateCanvas(canvas, rect.rotate) : canvas
+    const dataUrl = rotated.toDataURL('image/png')
+    const isQuarterTurn = rect.rotate === 90 || rect.rotate === 270
+    const drawW = isQuarterTurn ? rect.h : rect.w
+    const drawH = isQuarterTurn ? rect.w : rect.h
+    doc.addImage(dataUrl, 'PNG', rect.x, rect.y, drawW, drawH, undefined, 'FAST')
+  })
+  doc.save(filename)
+}
+
 
